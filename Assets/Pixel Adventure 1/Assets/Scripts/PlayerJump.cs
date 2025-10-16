@@ -1,61 +1,79 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Numerics;
 using UnityEngine;
 
 public class PlayerJump : MonoBehaviour
 {
+    [SerializeField] private PlayerMovementState playerMovementState;
 
-[SerializeField] private Rigidbody2D rigidBody;
+    [SerializeField] private Rigidbody2D rigidBody;
+    [SerializeField] private SpriteRenderer spriteRenderer;
 
-[SerializeField] private SpriteRenderer spriteRenderer;
+    [SerializeField] private float jumpForce = 6f;
+    [SerializeField] private float doublejumpForce = 6f;
+    [SerializeField] private Vector2 wallJumpForce = new Vector2(4f, 8f);
+    [SerializeField] private float wallJumpMovementCooldown = 0.2f;
 
-[SerializeField] private float jumpForce = 6;
-
-[SerializeField] private float doublejumpForce = 6;
-
+    private PlayerMovement playerMovement;
 
     private float playerHalfHeight;
-
+    private float playerHalfWidth;
     private bool canDoubleJump;
 
     private void Start()
-
     {
-
         playerHalfHeight = spriteRenderer.bounds.extents.y;
-
+        playerHalfWidth = spriteRenderer.bounds.extents.x;
+        playerMovement = GetComponent<PlayerMovement>();
     }
 
-
-
-
-    // Update is called once per frame
     void Update()
     {
-
-
-        if (Input.GetButtonDown("Jump") && !GetIsGrounded())
+        if (Input.GetButtonDown("Jump"))
         {
+            CheckJumpType();
+        }
+    }
+
+    private void CheckJumpType()
+    {
+        bool isGrounded = GetIsGrounded();
+
+        if (isGrounded)
+        {
+            playerMovementState.SetMoveState(PlayerMovementState.MoveState.Jump);
             Jump(jumpForce);
         }
-
-        else if (Input.GetButtonDown("Jump") && !GetIsGrounded() && canDoubleJump  )
+        else
         {
-            rigidBody.velocity = Vector2.zero;
-            rigidBody.angularVelocity = 0;
-            Jump(doublejumpForce);
-            canDoubleJump = false;
+            int direction = GetWallJumDirection();
+
+            if (direction == 0 && canDoubleJump && rigidBody.velocity.y <= 0.1f)
+            {
+                DoubleJump();
+            }
+            else if (direction != 0)
+            {
+                WallJump(direction);
+            }
         }
     }
 
-
-    private void OnCollisionEnter2D(Collision2D collision)
+    private int GetWallJumDirection()
     {
-        GetIsGrounded();
-
+        if (Physics2D.Raycast(transform.position, Vector2.right, playerHalfWidth + 0.1f, LayerMask.GetMask("Ground")))
+        {
+            return -1; // jump left
+        }
+        else if (Physics2D.Raycast(transform.position, Vector2.left, playerHalfWidth + 0.1f, LayerMask.GetMask("Ground")))
+        {
+            return 1; // jump right
+        }
+        else
+        {
+            return 0; // no wall
+        }
     }
-
 
     private bool GetIsGrounded()
     {
@@ -64,18 +82,31 @@ public class PlayerJump : MonoBehaviour
         {
             canDoubleJump = true;
         }
-
         return hit;
     }
 
-private void Jump(float force)
-{
-    
-   
-        rigidBody.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-  
+    private void DoubleJump()
+    {
+        rigidBody.velocity = Vector2.zero;
+        rigidBody.angularVelocity = 0;
+        Jump(doublejumpForce);
+        canDoubleJump = false;
+        playerMovementState.SetMoveState(PlayerMovementState.MoveState.Double_Jump);
+    }
 
+    private void WallJump(int direction)
+    {
+        Vector2 force = wallJumpForce;
+        force.x *= direction;
+        rigidBody.velocity = Vector2.zero;
+        rigidBody.angularVelocity = 0;
+        playerMovement.wallJumpCooldown = wallJumpMovementCooldown;
+        rigidBody.AddForce(force, ForceMode2D.Impulse);
+        playerMovementState.SetMoveState(PlayerMovementState.MoveState.Wall_Jump);
+    }
 
+    private void Jump(float force)
+    {
+        rigidBody.AddForce(Vector2.up * force, ForceMode2D.Impulse);
+    }
 }
-}
-

@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class NewBehaviourScript : MonoBehaviour
+public class PlayerMovement : MonoBehaviour
 {
 
 
@@ -10,6 +10,9 @@ public class NewBehaviourScript : MonoBehaviour
         [SerializeField] private SpriteRenderer spriteRenderer;
 
         [SerializeField] private Animator  animator;
+
+
+        public float wallJumpCooldown  {get; set;}
 
         private Vector2 movement;
 
@@ -33,8 +36,16 @@ public class NewBehaviourScript : MonoBehaviour
         {
 
                 HandelMovement();
-                ClapMovement();
+                //ClapMovement();
                 FlipCharacterX();
+
+
+                if (wallJumpCooldown > 0f ) {
+
+
+                 wallJumpCooldown -= Time.deltaTime;        
+
+                }
         }
 
         private void FlipCharacterX()
@@ -57,17 +68,12 @@ public class NewBehaviourScript : MonoBehaviour
 
         private void HandelMovement()
         {
+                
+                if (wallJumpCooldown > 0f) return ;
                 float input = Input.GetAxis("Horizontal");
                 movement.x = input * speed * Time.deltaTime;
                 transform.Translate(movement);
-                if (input != 0)
-                {
-                        animator.SetBool("isRunning", true);
-                }
-                else
-                {
-                        animator.SetBool("isRunning", false);
-                }
+           
         }
 
 
